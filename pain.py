@@ -6,6 +6,7 @@ import sys
 import time
 
 import locale
+from socket import error as SocketError
 
 try:
     from colorama import Fore, Back, Style
@@ -23,51 +24,57 @@ except ImportError:
 timeout_count = 0
 success_count = 0
 five_hundred_count = 0
+connection_error_count = 0
 
-other_result_codes = []
 durations = []
+elapsed = []
 q = Queue()
 
 result_codes = {}
 locale.setlocale(locale.LC_ALL, 'en_US')
 
+update_ui_now = True
+
 
 def update_ui():
-    while True:
+    global update_ui_now
+
+    while update_ui_now:
         _update_ui()
         time.sleep(0.1)
 
 
 def _update_ui():
-        global timeout_count, result_codes
+        global timeout_count, result_codes, connection_error_count
 
         print '\r',
 
         for k, v in result_codes.iteritems():
 
-            print "%ss:" % k,
+            print "%s:" % k,
 
-            if k == 200:
+            if k == '200 OK':
                 print(Fore.LIGHTGREEN_EX),
 
-            if k >= 400 and k < 500:
-                print(Fore.YELLOW),
-
-            if k >= 500:
+            else:
                 print(Fore.RED),
 
             print "%s     " % v,
             print(Style.RESET_ALL),
 
         if timeout_count > 0:
-            print('Timeouts:  '+Fore.RED + str(timeout_count) + Style.RESET_ALL),
+            print('Timeouts:  '+Fore.YELLOW + str(timeout_count) + Style.RESET_ALL),
+
+        if connection_error_count >0:
+            print('Connection Errors:  '+Fore.RED + str(connection_error_count) + Style.RESET_ALL),
+
         sys.stdout.flush()
 
 _timeout = 5
 
 
 def do_work():
-    global timeout_count, result_codes, durations
+    global timeout_count, result_codes, durations, elapsed, connection_error_count
 
     while True:
         url = q.get()
@@ -75,16 +82,21 @@ def do_work():
             start = time.time()
             res = requests.get(url, timeout=_timeout)
 
-            if res.status_code not in result_codes:
-                result_codes[res.status_code] = 0
+            elapsed.append(res.elapsed.total_seconds())
 
-            result_codes[res.status_code] += 1
+            if '%s %s' % (res.status_code, res.reason) not in result_codes:
+                result_codes['%s %s' % (res.status_code, res.reason)] = 0
+
+            result_codes['%s %s' % (res.status_code, res.reason)] += 1
 
             if res.status_code == 200:
                 durations.append(time.time() - start)
 
         except requests.RequestException:
             timeout_count += 1
+
+        except SocketError as e:
+            connection_error_count += 1
 
         q.task_done()
 
@@ -96,7 +108,7 @@ def do_work():
 @click.option('--timeout', default=5)
 def main(hits, workers, url, timeout):
 
-    global _timeout, durations, result_codes
+    global _timeout, durations, result_codes, update_ui_now
     _timeout = timeout
     print ""
     print Fore.CYAN + 'PAIN SO GOOD  v0.0001              ' + Style.RESET_ALL
@@ -132,18 +144,25 @@ def main(hits, workers, url, timeout):
         sys.exit(1)
 
     _update_ui()
+    update_ui_now = False
 
     print ""
-
-    if durations:
-        print "\nAverage 200 response time: %.2f seconds." % (reduce(lambda x, y: x + y, durations) / len(durations))
 
     total_seconds = time.time()-main_start
 
     print "Total time: %.2f seconds." % total_seconds
 
-    if 200 in result_codes:
-        print "Successful Requests Per Second: %.2f" % (result_codes[200] / total_seconds)
+    if '200 OK' in result_codes:
+        print "Successful Requests Per Second: %.2f" % (result_codes['200 OK'] / total_seconds)
+
+    if durations:
+        print "Average response: %.2f seconds." % (reduce(lambda x, y: x + y, durations) / len(durations))
+        print "Longest Response: %.2f seconds" % max(durations)
+        print "Quickest Response: %.2f seconds" % min(durations)
+
+    if elapsed:
+        print "Longest Elapsed: %.2f seconds" % max(elapsed)
+        print "Quickest Elapsed: %.2f seconds" % min(elapsed)
 
     print ""
 
