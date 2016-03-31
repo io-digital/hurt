@@ -9,7 +9,12 @@ var command = process.argv[0],
     secret = process.argv[3],
     sends = parseInt(process.argv[4] || 0, 10);
 
-if (!(host && secret && sends)) process.exit(1);
+if (!(host && secret && sends)) {
+  console.log('ARGS - host, shared_secret, packets');
+  console.log('EXAMPLE - node index.js example.com thisismysecret 100');
+  console.log('the above example sends one hundred access-requests encoded with the given shared secret to example.com');
+  process.exit(1);
+}
 
 var radius = require('radius');
 var access_request, total = sends, sent = 0;
