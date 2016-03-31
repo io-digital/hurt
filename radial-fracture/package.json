@@ -1,0 +1,16 @@
+{
+  "name": "radial-fracture",
+  "private": true,
+  "version": "0.0.0",
+  "description": "send access-requests to a radius server",
+  "main": "radial-fracture.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "Ant Cosentino <ant@io.co.za>",
+  "license": "Unlicensed",
+  "dependencies": {
+    "radius": "^1.1.2"
+  }
+}
