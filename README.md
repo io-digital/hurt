@@ -27,6 +27,19 @@ A script to inflict HTTP pain. The following applies:
  - `--url` The URL to punish
  - `--timeout` default=5
 
+2. radial-fracture
+------------------
+
+send packets to a given radius server
+
+`node radial-fracture/radial-fracture.js`
+
+note that radial-fracture uses positional arguments, not named arguments:
+
+- **argv[0]** default=undefined, type=string, host of radius server
+- **argv[1]** default=undefined, type=string, shared secret of radius server
+- **argv[2]** default=undefined, type=integer, number of radius packets to send
+
 Contribution
 ============
 

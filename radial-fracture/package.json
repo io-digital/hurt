@@ -1,9 +1,9 @@
 {
-  "name": "hurt-radius",
+  "name": "radial-fracture",
   "private": true,
   "version": "0.0.0",
   "description": "send access-requests to a radius server",
-  "main": "index.js",
+  "main": "radial-fracture.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
