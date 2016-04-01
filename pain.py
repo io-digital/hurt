@@ -45,30 +45,30 @@ def update_ui():
 
 
 def _update_ui():
-        global timeout_count, result_codes, connection_error_count
+    global timeout_count, result_codes, connection_error_count
 
-        print '\r',
+    print '\r',
 
-        for k, v in result_codes.iteritems():
+    for k, v in result_codes.iteritems():
 
-            print "%s:" % k,
+        print "%s:" % k,
 
-            if k == '200 OK':
-                print(Fore.LIGHTGREEN_EX),
+        if k == '200 OK':
+            print(Fore.LIGHTGREEN_EX),
 
-            else:
-                print(Fore.RED),
+        else:
+            print(Fore.RED),
 
-            print "%s     " % v,
-            print(Style.RESET_ALL),
+        print "%s     " % v,
+        print(Style.RESET_ALL),
 
-        if timeout_count > 0:
-            print('Timeouts:  '+Fore.YELLOW + str(timeout_count) + Style.RESET_ALL),
+    if timeout_count > 0:
+        print('Timeouts:  '+Fore.YELLOW + str(timeout_count) + Style.RESET_ALL) + '     ',
 
-        if connection_error_count >0:
-            print('Connection Errors:  '+Fore.RED + str(connection_error_count) + Style.RESET_ALL),
+    if connection_error_count >0:
+        print('Connection Errors:  '+Fore.RED + str(connection_error_count) + Style.RESET_ALL),
 
-        sys.stdout.flush()
+    sys.stdout.flush()
 
 _timeout = 5
 
@@ -111,7 +111,7 @@ def main(hits, workers, url, timeout):
     global _timeout, durations, result_codes, update_ui_now
     _timeout = timeout
     print ""
-    print Fore.CYAN + 'PAIN SO GOOD  v0.0001              ' + Style.RESET_ALL
+    print Fore.CYAN + 'PAIN IS GOOD  v0.0001              ' + Style.RESET_ALL
     print ""
     print '%sHitting: %s%s' % (Style.DIM, Style.NORMAL, url)
     print '%sHits:    %s%s%s' % (Style.DIM, Style.NORMAL, locale.format("%d", hits, grouping=True), Style.NORMAL)
