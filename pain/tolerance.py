@@ -36,10 +36,12 @@ _url = None
 hits = None
 workers = None
 
+break_out = False
+
 
 def do_work():
     global _timeout, timeout_count, connection_error_count, main_start, status, non_200_count, total_seconds, \
-        test_start, test_stop, requests_handled
+        test_start, test_stop, requests_handled, _tolerance, break_out
 
     while True:
         try:
@@ -74,11 +76,22 @@ def do_work():
 
         except requests.RequestException:
             timeout_count += 1
+            non_200_count += 1
 
         except SocketError:
             connection_error_count += 1
+            non_200_count += 1
 
         requests_handled += 1
+
+        if non_200_count > _tolerance:
+            break_out = True
+            test_stop = time.time()
+            with q.mutex:
+                q.queue.clear()
+            q.task_done()
+            status = "Failed, stopping..."
+            break
 
         if requests_handled == target_hits:
             test_stop = time.time()
@@ -88,7 +101,7 @@ def do_work():
 
 def update_ui_worker():
     global main_start, total_seconds, _timeout, hits, workers, status, test_number, total_seconds, test_start, \
-        test_stop, requests_handled, test_seconds, _tolerance, _url
+        test_stop, requests_handled, test_seconds, _tolerance, _url, break_out
 
     while True:
 
@@ -97,9 +110,12 @@ def update_ui_worker():
         if not q.empty():
             total_seconds = time.time()-main_start
 
+        # screen.addstr(1, 70, 'Break Out: %s     ' % break_out)
+
         screen.addstr(1, 2, 'PAIN TOLERANCE on %s' % _url, curses.color_pair(3)|curses.A_BOLD)
 
-        screen.addstr(3, 2, 'Status: %s                               ' % (status))
+        screen.addstr(3, 2, 'Status: %s                             ' % status)
+        screen.addstr(3, 70, 'Queue: %s        ' % q.qsize())
         screen.addstr(5, 2, 'Trying %s hits with %s workers  (Tolerance: %s Errors)    ' % (hits, workers, _tolerance))
         screen.addstr(6, 2, 'Timeout: %s seconds                      ' % (_timeout,))
         screen.addstr(7, 2, 'Active Workers: %s                       ' % (threading.active_count() - 2))
@@ -127,7 +143,7 @@ def update_ui_worker():
 
 @click.command()
 @click.option('--url', prompt="URL to request")
-@click.option('--timeout', default=5)
+@click.option('--timeout', default=10)
 @click.option('--tolerance', default=5)
 def main(url, timeout, tolerance):
     global break_out, status, target_hits, timeout_count, connection_error_count, non_200_count, test_number, \
@@ -155,10 +171,8 @@ def main(url, timeout, tolerance):
     ui.daemon = True
     ui.start()
 
-    break_out = False
-
     try:
-        for workers in [100, 200, 400, 800, 1000, 1200]:
+        for workers in [200, 400, 800, 1000, 1200, 1500, 2000]:
             if break_out:
                 break
 
@@ -175,7 +189,7 @@ def main(url, timeout, tolerance):
                     t = Thread(target=do_work)
                     t.start()
 
-                q.join()
+                # q.join()
 
                 status = "Waiting for workers to spin down..."
                 while True:
