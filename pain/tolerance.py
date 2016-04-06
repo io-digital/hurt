@@ -285,14 +285,14 @@ def main(url, timeout, tolerance):
 
         break_out = True
         test_stop = time.time()
-        screen.addstr(15 + test_number, 2, "Test cancelled.")
+        screen.addstr(16 + test_number, 2, "Test cancelled.")
         logging.warning('Keyboard Exit')
 
     finally:
         curses.endwin()
         logging.warning('Exit 2a')
 
-    screen.addstr(15 + test_number, 2, "Press any key to exit.")
+    screen.addstr(16 + test_number, 2, "Press any key to exit.")
     screen.getch()
 
     curses.endwin()
