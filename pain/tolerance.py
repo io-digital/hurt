@@ -1,12 +1,19 @@
-import requests
 from threading import Thread
 import threading
 import Queue
 import time
 from socket import error as SocketError
-import curses
-import click
 import sys
+
+try:
+    import requests
+    import curses
+    import click
+except ImportError:
+    print 'Tolerance requires the following Python modules: Requests, Curses and Click. You should be able to ' \
+          '`sudo pip install requests curses click`'
+    sys.exit(1)
+
 import utils
 
 q = Queue.Queue()
@@ -126,8 +133,6 @@ def update_ui_worker():
         screen.addstr(7, 2, 'Active Workers: %s       ' % (threading.active_count() - 2))
         screen.addstr(7, 40,'Queue: %s        ' % q.qsize())
 
-
-
         if test_start is None:
             test_seconds = 0
 
@@ -153,18 +158,19 @@ def update_ui_worker():
 
 
 tests = [
-    (50,50,),
-    (100,100,),
-    (200,200,),
-    (400,400,),
-    (600,600,),
-    (800,800,),
-    (1000,1000,),
-    (1500,1000,),
-    (2000,1000,),
-    (2000,1500,),
-    (2000,2000,)
+    (50, 50,),
+    (100, 100,),
+    (200, 200,),
+    (400, 400,),
+    (600, 600,),
+    (800, 800,),
+    (1000, 1000,),
+    (1500, 1000,),
+    (2000, 1000,),
+    (2000, 1500,),
+    (2000, 2000,)
 ]
+
 
 @click.command()
 @click.option('--url', prompt="URL to request")
@@ -194,7 +200,6 @@ def main(url, timeout, tolerance):
         print "Something went wrong trying to connect... timeout?"
         print e
         sys.exit(1)
-
 
     try:
         screen = curses.initscr()
@@ -280,14 +285,14 @@ def main(url, timeout, tolerance):
 
         break_out = True
         test_stop = time.time()
-        screen.addstr(34, 2, "Test cancelled.")
+        screen.addstr(15 + test_number, 2, "Test cancelled.")
         logging.warning('Keyboard Exit')
 
     finally:
         curses.endwin()
         logging.warning('Exit 2a')
 
-    screen.addstr(1, 2, "Press any key to exit.")
+    screen.addstr(15 + test_number, 2, "Press any key to exit.")
     screen.getch()
 
     curses.endwin()
