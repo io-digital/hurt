@@ -120,8 +120,6 @@ def update_ui_worker():
         if not q.empty():
             total_seconds = time.time()-main_start
 
-        # screen.addstr(1, 70, 'Break Out: %s     ' % break_out)
-
         screen.addstr(1, 2, 'PAIN TOLERANCE on %s' % _url, curses.color_pair(3)|curses.A_BOLD)
 
         screen.addstr(3, 2, 'Status: %s                             ' % status)
@@ -131,7 +129,7 @@ def update_ui_worker():
         screen.addstr(6, 40, 'Tolerance: %s errors                   ' % (_tolerance,))
 
         screen.addstr(7, 2, 'Active Workers: %s       ' % (threading.active_count() - 2))
-        screen.addstr(7, 40,'Queue: %s        ' % q.qsize())
+        screen.addstr(7, 40, 'Queue: %s        ' % q.qsize())
 
         if test_start is None:
             test_seconds = 0
@@ -142,16 +140,16 @@ def update_ui_worker():
             else:
                 test_seconds = test_stop - test_start
 
-        screen.addstr(10, 2, 'Test Seconds: %.2f         ' % test_seconds)
-        screen.addstr(10, 40, 'Requests handled: %s      ' % requests_handled)
+        screen.addstr(9, 2, 'Test Seconds: %.2f         ' % test_seconds)
+        screen.addstr(9, 40, 'Requests handled: %s      ' % requests_handled)
 
         if result_codes and test_seconds and '200 OK' in result_codes:
-            screen.addstr(11, 2, 'Requests per second: %.2f        ' % (int(result_codes['200 OK']) / test_seconds), )
+            screen.addstr(10, 2, 'Requests per second: %.2f        ' % (int(result_codes['200 OK']) / test_seconds), )
 
         if durations:
-            screen.addstr(11, 40, 'Average Request: %.2f seconds   ' % (reduce(lambda x, y: x + y, durations) / len(durations)))
+            screen.addstr(10, 40, 'Average Request: %.2f seconds   ' % (reduce(lambda x, y: x + y, durations) / len(durations)))
 
-        screen.addstr(13, 2, rc)
+        screen.addstr(12, 2, rc)
 
         screen.refresh()
         time.sleep(0.1)
@@ -259,8 +257,9 @@ def main(url, timeout, tolerance):
             if durations:
                 average_request_time = reduce(lambda x, y: x + y, durations) / len(durations)
 
-            screen.addstr(15 + test_number, 2, '%s hits with %s workers: %s   (%.2f RPS %.2f ART)           ' %
-                          (hits, workers, result, result_200/test_seconds, average_request_time), cp)
+            if test_seconds:
+                screen.addstr(14 + test_number, 2, '%s hits with %s workers: %s   (%.2f RPS %.2f ART)           ' %
+                              (hits, workers, result, result_200/test_seconds, average_request_time), cp)
 
             if 'Fail' in result:
                 break_out = True
