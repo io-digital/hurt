@@ -117,7 +117,7 @@ def update_ui_worker():
 
         rc = utils.render_result_codes(result_codes, timeout_count, connection_error_count)
 
-        if not q.empty():
+        if not q.empty() and main_start:
             total_seconds = time.time()-main_start
 
         screen.addstr(1, 2, 'PAIN TOLERANCE on %s' % _url, curses.color_pair(3)|curses.A_BOLD)
