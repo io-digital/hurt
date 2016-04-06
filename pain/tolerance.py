@@ -119,9 +119,9 @@ def update_ui_worker():
 
         screen.addstr(3, 2, 'Status: %s                             ' % status)
 
-        screen.addstr(5, 2, 'Trying %s hits with %s workers   ' % (hits, workers))
-        screen.addstr(6, 2, 'Timeout: %s seconds        ' % (_timeout,))
-        screen.addstr(6, 40, 'Tolerance: %s seconds        ' % (_tolerance,))
+        screen.addstr(5, 2, 'Trying %s hits with %s workers          ' % (hits, workers))
+        screen.addstr(6, 2, 'Timeout: %s seconds                     ' % (_timeout,))
+        screen.addstr(6, 40, 'Tolerance: %s errors                   ' % (_tolerance,))
 
         screen.addstr(7, 2, 'Active Workers: %s       ' % (threading.active_count() - 2))
         screen.addstr(7, 40,'Queue: %s        ' % q.qsize())
@@ -152,6 +152,20 @@ def update_ui_worker():
         time.sleep(0.1)
 
 
+tests = [
+    (50,50,),
+    (100,100,),
+    (200,200,),
+    (400,400,),
+    (600,600,),
+    (800,800,),
+    (1000,1000,),
+    (1500,1000,),
+    (2000,1000,),
+    (2000,1500,),
+    (2000,2000,)
+]
+
 @click.command()
 @click.option('--url', prompt="URL to request")
 @click.option('--timeout', default=10)
@@ -165,14 +179,20 @@ def main(url, timeout, tolerance):
     _tolerance = tolerance
     _url = url
 
+    logging.warning('Starting up...')
+
     # Check that the url provided is valid
     try:
-        requests.get(url)
+        requests.get(url, timeout=5)
     except requests.exceptions.MissingSchema:
         print "Invalid URL"
         sys.exit(1)
     except requests.exceptions.ConnectionError:
         print "Is that a valid URL? We can't connect to it."
+        sys.exit(1)
+    except Exception as e:
+        print "Something went wrong trying to connect... timeout?"
+        print e
         sys.exit(1)
 
 
@@ -195,78 +215,79 @@ def main(url, timeout, tolerance):
         ui.daemon = True
         ui.start()
 
-        try:
-            for workers in [200, 400, 800, 1000, 1200, 1500, 2000]:
-                if break_out:
+        for test in tests:
+            hits = test[0]
+            workers = test[1]
+
+            if break_out:
+                break
+
+            target_hits = hits
+
+            for t in range(hits):
+                q.put(url)
+
+            for w in range(workers):
+                t = Thread(target=do_work)
+                t.start()
+
+            # q.join()
+
+            status = "Waiting for workers to spin down..."
+            while True:
+                if threading.active_count() <= 2:
                     break
 
-                for hits in [100, 1000, 2000]:
-                    if break_out:
-                        break
+            if timeout_count + connection_error_count + non_200_count > tolerance:
+                result = 'Fail'
+                cp = curses.color_pair(2)|curses.A_BOLD
+            else:
+                result = 'Pass'
+                cp = curses.color_pair(3)|curses.A_BOLD
 
-                    target_hits = hits
+            result_200 = result_codes.get('200 OK')
+            if result_200 is None:
+                result_200 = 0
+            else:
+                result_200 = int(result_200)
 
-                    for t in range(hits):
-                        q.put(url)
+            if durations:
+                average_request_time = reduce(lambda x, y: x + y, durations) / len(durations)
 
-                    for w in range(workers):
-                        t = Thread(target=do_work)
-                        t.start()
+            screen.addstr(15 + test_number, 2, '%s hits with %s workers: %s   (%.2f RPS %.2f ART)           ' %
+                          (hits, workers, result, result_200/test_seconds, average_request_time), cp)
 
-                    # q.join()
+            if 'Fail' in result:
+                break_out = True
+                break
 
-                    status = "Waiting for workers to spin down..."
-                    while True:
-                        if threading.active_count() <= 2:
-                            break
+            status = "Restarting..."
+            time.sleep(2)
+            result_codes = {}
+            non_200_count = 0
+            elapsed = []
+            durations = []
+            timeout_count = 0
+            connection_error_count = 0
+            test_number += 1
+            requests_handled = 0
+            test_start = None
+            test_stop = None
 
-                    if timeout_count + connection_error_count + non_200_count > tolerance:
-                        result = 'Fail'
-                        cp = curses.color_pair(2)|curses.A_BOLD
-                    else:
-                        result = 'Pass'
-                        cp = curses.color_pair(3)|curses.A_BOLD
+    except KeyboardInterrupt:
+        with q.mutex:
+            q.queue.clear()
 
-                    result_200 = result_codes.get('200 OK')
-                    if result_200 is None:
-                        result_200 = 0
-                    else:
-                        result_200 = int(result_200)
-
-                    screen.addstr(15 + test_number, 2, '%s hits with %s workers: %s   (%.2f requests per second)           ' %
-                                  (hits, workers, result, result_200/test_seconds), cp)
-
-                    if 'Fail' in result:
-                        break_out = True
-                        break
-
-                    status = "Restarting..."
-                    time.sleep(2)
-                    result_codes = {}
-                    non_200_count = 0
-                    elapsed = []
-                    durations = []
-                    timeout_count = 0
-                    connection_error_count = 0
-                    test_number += 1
-                    requests_handled = 0
-                    test_start = None
-                    test_stop = None
-
-        except KeyboardInterrupt:
-            with q.mutex:
-                q.queue.clear()
-
-            break_out = True
-            test_stop = time.time()
-            screen.addstr(34, 2, "Test cancelled.")
-            logging.warning('Keyboard Exit')
+        break_out = True
+        test_stop = time.time()
+        screen.addstr(34, 2, "Test cancelled.")
+        logging.warning('Keyboard Exit')
 
     finally:
         curses.endwin()
-        logging.debug('Exit 2a')
+        logging.warning('Exit 2a')
 
-    screen.addstr(35, 2, "Press any key to exit.")
+    screen.addstr(1, 2, "Press any key to exit.")
     screen.getch()
 
     curses.endwin()
