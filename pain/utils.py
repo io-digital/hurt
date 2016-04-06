@@ -9,7 +9,7 @@ def render_result_codes(result_codes, timeout_count, connection_error_count):
     if connection_error_count > 0:
         rc += 'Connection Errors:  %s' % connection_error_count
 
-    rc += '                               '
+    rc += '                                            '
 
     return rc
 

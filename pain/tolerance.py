@@ -10,8 +10,8 @@ try:
     import curses
     import click
 except ImportError:
-    print 'Tolerance requires the following Python modules: Requests, Curses and Click. You should be able to ' \
-          '`sudo pip install requests curses click`'
+    print 'Tolerance requires the following Python modules: Requests and Click. You should be able to ' \
+          '`sudo pip install requests click`'
     sys.exit(1)
 
 import utils
@@ -144,10 +144,10 @@ def update_ui_worker():
         screen.addstr(9, 40, 'Requests handled: %s      ' % requests_handled)
 
         if result_codes and test_seconds and '200 OK' in result_codes:
-            screen.addstr(10, 2, 'Requests per second: %.2f        ' % (int(result_codes['200 OK']) / test_seconds), )
+            screen.addstr(10, 2, 'Requests per second: %.2f      ' % (int(result_codes['200 OK']) / test_seconds), )
 
         if durations:
-            screen.addstr(10, 40, 'Average Request: %.2f seconds   ' % (reduce(lambda x, y: x + y, durations) / len(durations)))
+            screen.addstr(10, 40, 'Average Request: %.2f seconds     ' % (reduce(lambda x, y: x + y, durations) / len(durations)))
 
         screen.addstr(12, 2, rc)
 
@@ -258,8 +258,8 @@ def main(url, timeout, tolerance):
                 average_request_time = reduce(lambda x, y: x + y, durations) / len(durations)
 
             if test_seconds:
-                screen.addstr(14 + test_number, 2, '%s hits with %s workers: %s   (%.2f RPS %.2f ART)           ' %
-                              (hits, workers, result, result_200/test_seconds, average_request_time), cp)
+                screen.addstr(13 + test_number, 2, '%s hits with %s workers: %s   (%.2f RPS | %.2f ART | %d ERR)           ' %
+                              (hits, workers, result, result_200/test_seconds, average_request_time, non_200_count), cp)
 
             if 'Fail' in result:
                 break_out = True
