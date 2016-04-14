@@ -1,48 +1,37 @@
-Hurt is
-=======
 
-Hurt is purgatory for servers. Here they are purified before they go.
+# Hurt
 
-Hurt is a developer playground. You get the chance to get back at them.
+##### Abstract
 
-Hurt is a collection of scripts in any language inflicting damage on any server running any protocol on any port.
+Hurt is a collection of scripts and tools designed for stress-testing services.
 
-Hurt is not
-===========
+##### Inventory
 
-A repo of DDoS scripts. Go write your own script kid.
+* pain.py - HTTP load testing
+  - Usage: `python pain/pain.py`
+    + `--hits` number of requests 
+    + `--workers` number of threads
+    + `--url` host(name) to attack
+    + `--timeout` request timeout in seconds
 
-Inventory
-=========
+* tolerance.py - HTTP load testing (ncurses interface)
+  - Usage: `python pain/tolerance.py`
+    + `--tolerance` integer error limit
+    + `--timeout` request timeout in seconds
+    + `--url` host(name) to attack
 
-1. pain.py
-----------
+* radial-fracture - RADIUS load testing
+  - Usage: `node radial-fracture/radial-fracture.js example.com shared_secret 5000`
+    + `process.argv[0]` host of radius server
+    + `process.argv[1]` shared secret of radius server
+    + `process.argv[2]` number of radius packets to send
 
-A script to inflict HTTP pain. The following applies:
+##### Contributing
 
-`python pain.py`
+This repository accepts contributions for any language or runtime environment. However, please keep contributions in the realm of load/stress/penetration testing, or some other relevant thing not mentioned here. If you're unsure whether your contribution fits this project, please open an issue to discuss it!
 
- - `--hits` default=2000 Number of requests
- - `--workers` default=500 Number of workers
- - `--url` The URL to punish
- - `--timeout` default=5
+Please fully document your script in the Inventory section of the README. Failure to do so will likely result in your contribution being rejected.
 
-2. radial-fracture
-------------------
+##### Legal
 
-send packets to a given radius server
-
-`node radial-fracture/radial-fracture.js`
-
-note that radial-fracture uses positional arguments, not named arguments:
-
-- **argv[0]** default=undefined, type=string, host of radius server
-- **argv[1]** default=undefined, type=string, shared secret of radius server
-- **argv[2]** default=undefined, type=integer, number of radius packets to send
-
-Contribution
-============
-
-We want to build up a library that we may use to stress test server setups and apps. If you simply want to use it as a place to write some new language code or to play please do so.
-
-No language is specified but please keep it to one script which may be fired using one command. Also add it to the inventory in this readme. If you come up with a reason for this contribution rule to be invalid, change it by pull request. 
+Use of this software indemnifies [us](https://io.co.za) against any liability for your actions.
