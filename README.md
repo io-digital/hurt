@@ -1,9 +1,7 @@
 
 # Hurt
 
-##### Abstract
-
-Hurt is a collection of scripts and tools designed for stress-testing services.
+> Various scripts to inflict damage on servers.
 
 ##### Inventory
 
