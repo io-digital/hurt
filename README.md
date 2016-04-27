@@ -14,9 +14,16 @@
 
 * tolerance.py - HTTP load testing (ncurses interface)
   - Usage: `python pain/tolerance.py`
-    + `--tolerance` integer error limit
-    + `--timeout` request timeout in seconds
     + `--url` host(name) to attack
+    + `--tolerance` integer error limit (optional)
+    + `--timeout` request timeout in seconds (optional)
+
+* tolerance3/tolerance3.py - The Simplified Python3 Implementation of Tolerance
+  - Usage: `python3 tolerance3/tolerance3.py`
+    + `--url` host(name) to attack
+    + `--tolerance` integer error limit (optional)
+    + `--timeout` request timeout in seconds (optional)
+    + You can also --help to get some more instructions
 
 * radial-fracture - RADIUS load testing
   - Usage: `node radial-fracture/radial-fracture.js example.com shared_secret 5000`
