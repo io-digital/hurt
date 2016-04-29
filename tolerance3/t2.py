@@ -1,16 +1,11 @@
-#!/usr/bin/python3
 from Queue import Queue
 from Queue import Empty
 import time
 import threading
 import sys
-import requests
 import click
 import socket
 from urlparse import urlparse
-
-from requests.exceptions import ReadTimeout
-from socket import error as socket_error
 
 import logging
 logging.basicConfig(filename='log.log', level=logging.INFO)
@@ -28,6 +23,7 @@ tests = [
     (4000, 1000,),
 ]
 
+q = Queue()
 
 def print_logo():
     print('''\033[1;32;40m
@@ -84,7 +80,6 @@ def process_report(report, error_tolerance):
 
 
 def do_work(job):
-    url = job.get('url')
     timeout = job.get('timeout')
     ip = job.get('ip')
     port = job.get('port')
@@ -130,22 +125,20 @@ def do_work(job):
 
 def worker():
     while True:
-        if q:
-            try:
-                job = q.get(True, 2)
+        try:
+            job = q.get(True, 2)
 
-            except Empty:
-                break
-
-            result = do_work(job)
-            job.get('report').append(result)
-            q.task_done()
-
-        else:
+        except Empty:
             break
 
+        except TypeError:
+            # Catches a weird scenario in q.get()
+            break
 
-q = Queue()
+        result = do_work(job)
+        job.get('report').append(result)
+        q.task_done()
+
 
 
 @click.command()
@@ -206,7 +199,7 @@ def main(url, timeout, tolerance):
             q.put({'url': url, 'timeout': timeout, 'report': report, 'ip': ip, 'port': port, 'path': path,
                    'netloc': netloc})
 
-        q.join()       # block until all tasks are done
+        q.join()  # block until all tasks are done
 
         logging.info(report)
 
