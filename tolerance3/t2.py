@@ -76,8 +76,10 @@ def process_report(report, error_tolerance):
 
     total_success = len(report)-total_non_200
 
-    out = "RPS: %.2f   ART: %.2fs   Total: %.2fs" % \
-        (total_success/total_time, total_ms/1000/len(report), total_time)
+    out = ""
+    out += ("RPS: %.2f" % (total_success/total_time)).ljust(16)
+    out += ("ART: %.2fs" % (total_ms/1000/len(report))).ljust(14)
+    out += "Total: %.2fs" % total_time
 
     if not test_passed:
         out += '\n'.ljust(32)
@@ -222,9 +224,9 @@ def main(url, timeout, tolerance):
         test_passed, summary = process_report(report, tolerance)
 
         if test_passed:
-            print('\033[1;32;40mPassed -'),
+            print('\033[1;32;40mPass    '),
         else:
-            print('\033[1;31;40mFailed -'),
+            print('\033[1;31;40mFail    '),
 
         print(summary + '\033[1;37;40m')
 
