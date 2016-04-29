@@ -54,6 +54,9 @@ def process_report(report, error_tolerance):
 
             result_codes[status_code] += 1
 
+            if status_code != 200:
+                total_non_200 += 1
+
         else:
             total_non_200 += 1
             if r.get('timeout'):
