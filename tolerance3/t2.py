@@ -28,13 +28,13 @@ tests = [
 q = Queue()
 
 def print_logo():
-    print('''\033[1;32;40m
+    print('''\033[1;32m
   ______ ___
  /_  __/|__ \\
   / /   __/ /
- / /   / __/
+ / /   / __/    Now with less DNS!
 /_/   /____/
- \033[1;37;40m''')
+ \033[m''')
 
 
 def process_report(report, error_tolerance):
@@ -81,8 +81,11 @@ def process_report(report, error_tolerance):
     out += ("ART: %.2fs" % (total_ms/1000/len(report))).ljust(14)
     out += "Total: %.2fs" % total_time
 
+    if test_passed and total_non_200 > 0:
+        out += "    \033[1;33mErrors: %s\033[m" % total_non_200
+
     if not test_passed:
-        out += '\n'.ljust(32)
+        out += '\n'.ljust(32) + '\033[1;33m'
         for k, v in result_codes.items():
             out += "%s: %s    " % (k, v)
 
@@ -167,15 +170,14 @@ def main(url, timeout, tolerance):
     print_logo()
     print("URL: %s" % url)
     print("Timeout: %s    Tolerance: %s" % (timeout, tolerance))
+    print('Looking up DNS once:'),
+    parsed = urlparse(url)
+    ip = socket.gethostbyname(parsed.netloc)
+    print ip
     print('')
     print('RPS: Requests Per Second. (only counts successful requests)')
     print('ART: Average Request Time. (includes timeouts etc)')
     print('')
-
-    print('Looking up DNS once: '),
-    parsed = urlparse(url)
-    ip = socket.gethostbyname(parsed.netloc)
-    print ip + ''
 
     if parsed.scheme == 'http':
         port = 80
@@ -224,14 +226,16 @@ def main(url, timeout, tolerance):
         test_passed, summary = process_report(report, tolerance)
 
         if test_passed:
-            print('\033[1;32;40mPass    '),
+            print('\033[1;32mPass    '),
         else:
-            print('\033[1;31;40mFail    '),
+            print('\033[1;31mFail    '),
 
-        print(summary + '\033[1;37;40m')
+        print(summary + '\033[m')
 
         if not test_passed:
             break
+
+    print ""
 
 
 if __name__ == "__main__":
