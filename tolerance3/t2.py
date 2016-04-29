@@ -9,8 +9,8 @@ from socket import error as SocketError
 import errno
 from urlparse import urlparse
 
-import logging
-logging.basicConfig(filename='log.log', level=logging.INFO)
+# import logging
+# logging.basicConfig(filename='log.log', level=logging.INFO)
 
 # Tests are loaded as (hits, workers,),
 tests = [
@@ -23,6 +23,8 @@ tests = [
     (1000, 1000,),
     (2000, 1000,),
     (4000, 1000,),
+    (8000, 1000,),
+    (16000, 1000,),
 ]
 
 q = Queue()
@@ -221,7 +223,7 @@ def main(url, timeout, tolerance):
 
         q.join()  # block until all tasks are done
 
-        logging.info(report)
+        # logging.info(report)
 
         test_passed, summary = process_report(report, tolerance)
 
