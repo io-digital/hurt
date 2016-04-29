@@ -130,15 +130,19 @@ def do_work(job):
 
 def worker():
     while True:
-        try:
-            job = q.get(True, 2)
+        if q:
+            try:
+                job = q.get(True, 2)
 
-        except Empty:
+            except Empty:
+                break
+
+            result = do_work(job)
+            job.get('report').append(result)
+            q.task_done()
+
+        else:
             break
-
-        result = do_work(job)
-        job.get('report').append(result)
-        q.task_done()
 
 
 q = Queue()
