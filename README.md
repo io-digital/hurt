@@ -23,6 +23,7 @@
     + `--url` host(name) to attack
     + `--tolerance` integer error limit (optional)
     + `--timeout` request timeout in seconds (optional)
+    + `--expect` expect this string in the HTTP response, fail if not (optional)
     + You can also --help to get some more instructions
 
 * radial-fracture - RADIUS load testing
