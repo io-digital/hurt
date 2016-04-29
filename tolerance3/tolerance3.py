@@ -30,18 +30,19 @@ tests = [
 
 
 def print_logo():
-    print('''\033[1;32;40m
+    print('''\033[1;32m
  _           _                                        _____
 | |         | |                                      |____ |
 | |_   ___  | |  ___  _ __   __ _  _ __    ___   ___     / /
 | __| / _ \ | | / _ \| '__| / _` || '_ \  / __| / _ \    \ \\
 | |_ | (_) || ||  __/| |   | (_| || | | || (__ |  __/.___/ /
- \__| \___/ |_| \___||_|    \__,_||_| |_| \___| \___|\____/\033[1;37;40m''')
+ \__| \___/ |_| \___||_|    \__,_||_| |_| \___| \___|\____/\033[m''')
 
 
 def process_report(report, error_tolerance):
     total_non_200 = 0
     total_ms = 0
+    total_not_present = 0
     result_codes = {'Timeouts': 0, 'Connection Errors': 0}
 
     for r in report:
@@ -57,6 +58,9 @@ def process_report(report, error_tolerance):
             if status_code != 200:
                 total_non_200 += 1
 
+            if r.get('expect_not_present'):
+                total_not_present += 1
+
         else:
             total_non_200 += 1
             if r.get('timeout'):
@@ -65,7 +69,7 @@ def process_report(report, error_tolerance):
             if r.get('connection_error'):
                 result_codes['Connection Errors'] += 1
 
-    if total_non_200 <= error_tolerance:
+    if total_non_200 <= error_tolerance and total_not_present < error_tolerance:
         test_passed = True
     else:
         test_passed = False
@@ -78,7 +82,7 @@ def process_report(report, error_tolerance):
         (total_success, total_non_200, total_success/total_time, total_ms/1000/len(report), total_time)
 
     if not test_passed:
-        out += '\n' + str(result_codes)
+        out += '\n' + str(result_codes) + '  Not Present: ' + str(total_not_present)
 
     return test_passed, out
 
@@ -89,10 +93,15 @@ def do_work(job):
     status_code = None
     timeout = False
     connection_error = False
+    expect_not_present = False
 
     try:
         result = requests.get(job.get('url'), timeout=job.get('timeout'))
         status_code = result.status_code
+
+        if job.get('expect'):
+            if job.get('expect') not in result.text:
+                expect_not_present = True
 
     except ReadTimeout:
         timeout = True
@@ -102,7 +111,7 @@ def do_work(job):
 
     return {'status_code': status_code, 'ms': (time.perf_counter()-tstart)*1000, 'timeout': timeout,
             'connection_error': connection_error,
-            'tstart': tstart, 'tstop': time.perf_counter()}
+            'tstart': tstart, 'tstop': time.perf_counter(), 'expect_not_present': expect_not_present}
 
 
 def worker():
@@ -125,11 +134,16 @@ q = Queue()
 @click.option('--url', prompt="URL to request", help='The URL to run the test on.')
 @click.option('--timeout', default=10, help='Timeout in seconds before moving on.')
 @click.option('--tolerance', default=5, help='How many errors will we tolerate?')
-def main(url, timeout, tolerance):
+@click.option('--expect', default=None, help='Only consider a request valid if it sees this value in the response.')
+def main(url, timeout, tolerance, expect):
     print_logo()
     print()
     print("URL: %s" % url)
     print("Timeout: %s    Tolerance: %s" % (timeout, tolerance))
+
+    if expect:
+        print('Expecting: "%s"' % expect)
+
     print()
     print('RPS: Requests Per Second. (only counts successful requests)')
     print('ART: Average Request Time. (includes timeouts etc)')
@@ -162,7 +176,7 @@ def main(url, timeout, tolerance):
                 sys.exit(1)
 
         for item in range(hits):
-            q.put({'url': url, 'timeout': timeout, 'report': report})
+            q.put({'url': url, 'timeout': timeout, 'report': report, 'expect': expect})
 
         q.join()       # block until all tasks are done
 
@@ -171,11 +185,11 @@ def main(url, timeout, tolerance):
         test_passed, summary = process_report(report, tolerance)
 
         if test_passed:
-            print('\033[1;32;40mPassed: ', end='')
+            print('\033[1;32mPassed: ', end='')
         else:
-            print('\033[1;31;40mFailed: ', end='')
+            print('\033[1;31mFailed: ', end='')
 
-        print(summary + '\033[1;37;40m')
+        print(summary + '\033[m')
         print()
 
         if not test_passed:
