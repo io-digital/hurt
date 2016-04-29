@@ -6,6 +6,8 @@ import threading
 import sys
 import requests
 import click
+import socket
+from urlparse import urlparse
 
 from requests.exceptions import ReadTimeout
 from socket import error as socket_error
@@ -31,12 +33,12 @@ tests = [
 
 def print_logo():
     print('''\033[1;32;40m
- _           _                                        _____
-| |         | |                                      |____ |
-| |_   ___  | |  ___  _ __   __ _  _ __    ___   ___     / /
-| __| / _ \ | | / _ \| '__| / _` || '_ \  / __| / _ \    \ \\
-| |_ | (_) || ||  __/| |   | (_| || | | || (__ |  __/.___/ /
- \__| \___/ |_| \___||_|    \__,_||_| |_| \___| \___|\____/\033[1;37;40m''')
+  ______ ___
+ /_  __/|__ \\
+  / /   __/ /
+ / /   / __/
+/_/   /____/
+ \033[1;37;40m''')
 
 
 def process_report(report, error_tolerance):
@@ -59,7 +61,7 @@ def process_report(report, error_tolerance):
 
         else:
             total_non_200 += 1
-            if r.get('timeout'):
+            if r.get('timed_out'):
                 result_codes['Timeouts'] += 1
 
             if r.get('connection_error'):
@@ -78,29 +80,52 @@ def process_report(report, error_tolerance):
         (total_success, total_non_200, total_success/total_time, total_ms/1000/len(report), total_time)
 
     if not test_passed:
-        out += '\n' + str(result_codes)
+        out += '\n'.ljust(32) + str(result_codes)
 
     return test_passed, out
 
 
 def do_work(job):
-    tstart = time.time()
+    url = job.get('url')
+    timeout = job.get('timeout')
+    ip = job.get('ip')
+    port = job.get('port')
+    path = job.get('path')
+    netloc = job.get('netloc')
 
     status_code = None
-    timeout = False
     connection_error = False
+    timed_out = False
 
-    try:
-        result = requests.get(job.get('url'), timeout=job.get('timeout'))
-        status_code = result.status_code
+    tstart = time.time()
+    s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    s.connect((ip, port))
+    s.settimeout(timeout)
+    s.send("GET /%s HTTP/1.0\nHost:%s\nUser-Agent:Mozilla 5.0\n\n" % (path, netloc,))
+    out = ""
 
-    except ReadTimeout:
-        timeout = True
+    while True:
+        try:
+            resp = s.recv(4094)
 
-    except socket_error:
-        connection_error = True
+            if not status_code:
+                l = resp.split('\n')
 
-    return {'status_code': status_code, 'ms': (time.time()-tstart)*1000, 'timeout': timeout,
+                if l[0].startswith('HTTP/'):
+                    i = l[0].split(' ')
+                    status_code = int(i[1])
+
+            if resp == "":
+                break
+
+            out += resp
+
+        except socket.timeout:
+            timed_out = True
+
+    s.close()
+
+    return {'status_code': status_code, 'ms': (time.time()-tstart)*1000, 'timed_out': timed_out,
             'connection_error': connection_error,
             'tstart': tstart, 'tstop': time.time()}
 
@@ -127,13 +152,27 @@ q = Queue()
 @click.option('--tolerance', default=5, help='How many errors will we tolerate?')
 def main(url, timeout, tolerance):
     print_logo()
-    print('')
     print("URL: %s" % url)
     print("Timeout: %s    Tolerance: %s" % (timeout, tolerance))
     print('')
     print('RPS: Requests Per Second. (only counts successful requests)')
     print('ART: Average Request Time. (includes timeouts etc)')
     print('')
+
+    print('Looking up DNS once: '),
+    parsed = urlparse(url)
+    ip = socket.gethostbyname(parsed.netloc)
+    print ip + ''
+
+    if parsed.scheme == 'http':
+        port = 80
+    elif parsed.scheme == 'https':
+        port = 443
+    else:
+        raise Exception("Can't figure out port?")
+
+    path = parsed.path
+    netloc = parsed.netloc
 
     for test in tests:
         hits = test[0]
@@ -147,8 +186,8 @@ def main(url, timeout, tolerance):
                       'threads.' % str(threading.active_count()-1))
                 sys.exit(1)
 
-        print('%s hits with %s workers' % (hits, workers))
-
+        print('%s hits with %s workers' % (hits, workers)).ljust(30),
+        sys.stdout.flush()
         report = []
 
         for i in range(workers):
@@ -162,7 +201,8 @@ def main(url, timeout, tolerance):
                 sys.exit(1)
 
         for item in range(hits):
-            q.put({'url': url, 'timeout': timeout, 'report': report})
+            q.put({'url': url, 'timeout': timeout, 'report': report, 'ip': ip, 'port': port, 'path': path,
+                   'netloc': netloc})
 
         q.join()       # block until all tasks are done
 
@@ -171,12 +211,11 @@ def main(url, timeout, tolerance):
         test_passed, summary = process_report(report, tolerance)
 
         if test_passed:
-            print('\033[1;32;40mPassed: '),
+            print('\033[1;32;40mPassed:'),
         else:
-            print('\033[1;31;40mFailed: '),
+            print('\033[1;31;40mFailed:'),
 
         print(summary + '\033[1;37;40m')
-        print('')
 
         if not test_passed:
             break
