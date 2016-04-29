@@ -5,6 +5,8 @@ import threading
 import sys
 import click
 import socket
+from socket import error as SocketError
+import errno
 from urlparse import urlparse
 
 import logging
@@ -39,6 +41,7 @@ def process_report(report, error_tolerance):
     total_non_200 = 0
     total_ms = 0
     result_codes = {'Timeouts': 0, 'Connection Errors': 0}
+    socket_errnos = {}
 
     for r in report:
         status_code = r.get('status_code')
@@ -58,8 +61,11 @@ def process_report(report, error_tolerance):
             if r.get('timed_out'):
                 result_codes['Timeouts'] += 1
 
-            if r.get('connection_error'):
+            if r.get('connection_errno'):
                 result_codes['Connection Errors'] += 1
+                if r.get('connection_errno') not in socket_errnos:
+                    socket_errnos[r.get('connection_errno')] = 0
+                socket_errnos[r.get('connection_errno')] += 1
 
     if total_non_200 <= error_tolerance:
         test_passed = True
@@ -74,7 +80,14 @@ def process_report(report, error_tolerance):
         (total_success, total_non_200, total_success/total_time, total_ms/1000/len(report), total_time)
 
     if not test_passed:
-        out += '\n'.ljust(32) + str(result_codes)
+        out += '\n'.ljust(32)
+        for k, v in result_codes.items():
+            out += "%s: %s    " % (k, v)
+
+        out += '\n'.ljust(32)
+        for k, v in socket_errnos.items():
+            out += "%s: %s    " % (errno.errorcode.get(k), v)
+
 
     return test_passed, out
 
@@ -87,7 +100,7 @@ def do_work(job):
     netloc = job.get('netloc')
 
     status_code = None
-    connection_error = False
+    connection_errno = False
     timed_out = False
 
     tstart = time.time()
@@ -116,10 +129,13 @@ def do_work(job):
         except socket.timeout:
             timed_out = True
 
+        except SocketError as e:
+            connection_errno = e.errno
+
     s.close()
 
     return {'status_code': status_code, 'ms': (time.time()-tstart)*1000, 'timed_out': timed_out,
-            'connection_error': connection_error,
+            'connection_errno': connection_errno,
             'tstart': tstart, 'tstop': time.time()}
 
 
@@ -188,7 +204,7 @@ def main(url, timeout, tolerance):
         for i in range(workers):
             try:
                 t = threading.Thread(target=worker)
-                t.daemon = True
+                #t.daemon = True
                 t.start()
 
             except RuntimeError:
